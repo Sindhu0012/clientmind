@@ -49,11 +49,13 @@ This means the agent isn't just storing raw text — it's building a real, evolv
 ```
 2. Create a `.env` file in the root with:
 GROQ_API_KEY=your_groq_key
+
 HINDSIGHT_API_KEY=your_hindsight_key
+
 HINDSIGHT_ENDPOINT=https://api.hindsight.vectorize.io
 PORT=3000
 
-3. Start the server:
+4. Start the server:
 ```bash
    node server.js
 ```
