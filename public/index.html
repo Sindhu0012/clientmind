@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClientMind — Relationship Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #12141a; --panel: #181b23; --surface: #1f2330; --border: #2a2f3d;
+    --text: #e9e6dd; --text-dim: #8d8a7c; --accent: #c9a05c; --accent-soft: rgba(201,160,92,.14);
+    --warm: #7fae8e; --cold: #c17a5a;
+    --serif: 'Lora', Georgia, serif; --mono: 'IBM Plex Mono', monospace; --sans: 'Public Sans', -apple-system, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); height: 100vh; display: flex; overflow: hidden; }
+  ::selection { background: var(--accent-soft); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .sidebar { width: 320px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .sidebar-head { padding: 24px 22px 14px; border-bottom: 1px solid var(--border); }
+  .wordmark { font-family: var(--serif); font-size: 20px; font-weight: 600; }
+  .wordmark span { color: var(--accent); }
+  .tagline { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+  .nav-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .nav-tab { flex: 1; padding: 10px 0; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--text-dim); cursor: pointer; border-bottom: 2px solid transparent; }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .stat-line { font-family: var(--mono); font-size: 11px; color: var(--text-dim); padding: 10px 22px; border-bottom: 1px solid var(--border); }
+  .stat-line .cold-count { color: var(--cold); }
+
+  .add-toggle { margin: 14px 22px 0; background: transparent; border: 1px dashed var(--border); color: var(--text-dim); font-family: var(--sans); font-size: 13px; padding: 9px 12px; border-radius: 6px; cursor: pointer; width: calc(100% - 44px); text-align: left; transition: border-color .15s, color .15s; }
+  .add-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+  .add-form { margin: 10px 22px 0; padding: 12px; background: var(--surface); border-radius: 8px; display: none; flex-direction: column; gap: 8px; }
+  .add-form.open { display: flex; }
+  .add-form input { background: var(--panel); border: 1px solid var(--border); color: var(--text); font-family: var(--sans); font-size: 13px; padding: 8px 10px; border-radius: 5px; }
+  .add-form-actions { display: flex; gap: 8px; }
+  .add-form button { border: none; font-family: var(--sans); font-weight: 600; font-size: 13px; padding: 8px 10px; border-radius: 5px; cursor: pointer; flex: 1; }
+  .add-form .save { background: var(--accent); color: #1a1408; }
+  .add-form .cancel { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+
+  .case-list { flex: 1; overflow-y: auto; padding: 10px 0; }
+  .case-item { position: relative; padding: 12px 40px 12px 62px; cursor: pointer; border-left: 2px solid transparent; min-height: 54px; }
+  .case-item:hover { background: var(--surface); }
+  .case-item.active { background: var(--surface); border-left-color: var(--accent); }
+
+  .avatar-ring { position: absolute; left: 14px; top: 10px; width: 36px; height: 36px; }
+  .avatar-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+  .avatar-ring .ring-bg { fill: none; stroke: var(--border); stroke-width: 2.5; }
+  .avatar-ring .ring-fg { fill: none; stroke-width: 2.5; stroke-linecap: round; transition: stroke-dashoffset .5s ease; }
+  .avatar-circle { position: absolute; top: 4px; left: 4px; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-weight: 600; font-size: 12px; color: #12141a; }
+
+  .case-name { font-family: var(--serif); font-size: 15px; font-weight: 600; }
+  .case-company { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .case-meta { font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); margin-top: 5px; }
+  .case-meta.cold-flag { color: var(--cold); }
+  .case-delete { position: absolute; right: 12px; top: 12px; background: none; border: none; color: var(--text-dim); font-size: 15px; cursor: pointer; display: none; padding: 2px 6px; border-radius: 4px; }
+  .case-item:hover .case-delete { display: block; }
+  .case-delete:hover { color: var(--cold); background: rgba(193,122,90,.12); }
+  .empty-list { padding: 20px 22px; color: var(--text-dim); font-size: 13px; }
+
+  .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+  .dossier { max-width: 720px; width: 100%; margin: 0 auto; padding: 40px 32px 60px; }
+
+  .empty-state { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: 80px; }
+  .empty-state h1 { font-family: var(--serif); font-size: 24px; font-weight: 600; }
+  .empty-state p { color: var(--text-dim); font-size: 14px; max-width: 360px; }
+
+  .dossier-head { border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 26px; display: flex; align-items: center; gap: 16px; }
+  .dossier-avatar-ring { position: relative; width: 56px; height: 56px; flex-shrink: 0; }
+  .dossier-avatar-ring svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+  .dossier-avatar-ring .ring-bg { fill: none; stroke: var(--border); stroke-width: 3; }
+  .dossier-avatar-ring .ring-fg { fill: none; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset .6s ease; }
+  .dossier-avatar-circle { position: absolute; top: 6px; left: 6px; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-weight: 600; font-size: 18px; color: #12141a; }
+  .dossier-head h1 { font-family: var(--serif); font-size: 26px; font-weight: 600; }
+  .dossier-meta { font-family: var(--mono); font-size: 12px; color: var(--text-dim); margin-top: 6px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .dossier-meta .flag { color: var(--cold); }
+
+  .field-label { font-size: 12px; color: var(--text-dim); margin-bottom: 8px; }
+  textarea { width: 100%; min-height: 90px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: var(--sans); font-size: 14px; border-radius: 8px; padding: 12px 14px; resize: vertical; line-height: 1.5; }
+  textarea::placeholder { color: var(--text-dim); }
+  .hint { font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); margin-top: 6px; }
+
+  .actions { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .btn { font-family: var(--sans); font-weight: 600; font-size: 13.5px; padding: 10px 16px; border-radius: 7px; border: none; cursor: pointer; transition: opacity .15s; }
+  .btn:hover:not(:disabled) { opacity: .88; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+  .btn-brief { background: var(--accent); color: #1a1408; }
+  .btn-email { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .status-msg { font-size: 12.5px; color: var(--warm); }
+  .status-msg.err { color: var(--cold); }
+
+  .briefing { margin-top: 28px; background: var(--panel); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 6px; padding: 20px 22px; }
+  .briefing-label { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .4px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .briefing-body { font-size: 14px; line-height: 1.65; white-space: pre-wrap; color: var(--text); min-height: 20px; }
+  .briefing.placeholder .briefing-body { color: var(--text-dim); font-style: italic; }
+  .briefing.loading .briefing-body { color: var(--text-dim); }
+  .cursor-blink { display: inline-block; width: 7px; height: 14px; background: var(--accent); margin-left: 2px; animation: blink 0.9s step-end infinite; vertical-align: text-bottom; }
+  @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+  .think-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); margin-right: 8px; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: .3; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.1); } }
+
+  .email-panel { margin-top: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 18px 20px; display: none; }
+  .email-panel.show { display: block; }
+  .email-subject { font-family: var(--serif); font-size: 15px; font-weight: 600; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .email-body { font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; color: var(--text); }
+  .email-copy { margin-top: 12px; font-family: var(--mono); font-size: 11px; background: transparent; border: 1px solid var(--border); color: var(--text-dim); padding: 6px 12px; border-radius: 5px; cursor: pointer; }
+  .email-copy:hover { color: var(--text); border-color: var(--accent); }
+
+  .timeline { margin-top: 30px; }
+  .timeline-label { font-family: var(--mono); font-size: 11px; color: var(--text-dim); letter-spacing: .4px; margin-bottom: 14px; }
+  .timeline-item { position: relative; padding: 0 0 18px 20px; border-left: 1px solid var(--border); }
+  .timeline-item:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .timeline-item::before { content: ''; position: absolute; left: -4px; top: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--warm); }
+  .timeline-date { font-family: var(--mono); font-size: 10.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .timeline-text { font-size: 13.5px; line-height: 1.55; color: var(--text); }
+  .timeline-empty { color: var(--text-dim); font-size: 13px; font-style: italic; }
+
+  .dash-section { margin-bottom: 30px; }
+  .dash-title { font-family: var(--serif); font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+  .dash-sub { font-family: var(--mono); font-size: 11px; color: var(--text-dim); margin-bottom: 20px; }
+  .watch-card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 18px 20px; margin-bottom: 12px; }
+  .watch-card-title { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .4px; margin-bottom: 10px; }
+  .watch-item { font-size: 14px; line-height: 1.7; color: var(--text); padding-left: 16px; position: relative; }
+  .watch-item::before { content: '—'; position: absolute; left: 0; color: var(--text-dim); }
+  .watch-item.cold { color: var(--cold); }
+  .watch-item.warm { color: var(--warm); }
+  .dash-loading { color: var(--text-dim); font-size: 13px; font-style: italic; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .briefing.reveal { animation: fadeIn .35s ease-out; }
+  .dossier { animation: fadeIn .25s ease-out; }
+
+  @media (max-width: 720px) {
+    body { flex-direction: column; height: auto; overflow: auto; }
+    .sidebar { width: 100%; max-height: 40vh; }
+    .dossier { padding: 24px 18px 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-head">
+    <div class="wordmark">Client<span>Mind</span></div>
+    <div class="tagline">relationship memory, on call</div>
+  </div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" id="tabDashboard">Dashboard</div>
+    <div class="nav-tab" id="tabClients">Clients</div>
+  </div>
+  <div class="stat-line" id="statLine"></div>
+  <button class="add-toggle" id="addToggle">+ New client</button>
+  <div class="add-form" id="addForm">
+    <input id="newName" placeholder="Client name" />
+    <input id="newCompany" placeholder="Company (optional)" />
+    <div class="add-form-actions">
+      <button class="save" id="addSubmit">Add</button>
+      <button class="cancel" id="addCancel">Cancel</button>
+    </div>
+  </div>
+  <div class="case-list" id="caseList"></div>
+</div>
+
+<div class="main">
+  <div class="dossier" id="dossier">
+    <div class="empty-state">
+      <h1>Loading dashboard…</h1>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = '';
+  let clients = [];
+  let activeId = null;
+  let view = 'dashboard'; // 'dashboard' | 'client'
+  const briefingCache = {};
+  const emailCache = {};
+  let thinkInterval = null;
+  let typeInterval = null;
+
+  const THINK_STEPS = [
+    'Opening the file…',
+    'Recalling past conversations…',
+    'Cross-referencing concerns and promises…',
+    'Weighing relationship warmth…',
+    'Drafting the briefing…'
+  ];
+
+  function hashHue(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) h = str.charCodeAt(i) + ((h << 5) - h);
+    return Math.abs(h) % 360;
+  }
+  function avatarColor(name) { return `hsl(${hashHue(name || 'x')}, 45%, 62%)`; }
+  function initials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1] ? parts[1][0] : '')).toUpperCase();
+  }
+  function warmth(days) { return Math.max(0, Math.min(1, 1 - (days / 30))); }
+  function warmthColor(w) {
+    if (w > 0.6) return 'var(--warm)';
+    if (w > 0.3) return 'var(--accent)';
+    return 'var(--cold)';
+  }
+  function ringSVG(radius, w, color, size) {
+    const c = 2 * Math.PI * radius;
+    const offset = c * (1 - w);
+    const center = size / 2;
+    return `<svg width="${size}" height="${size}">
+      <circle class="ring-bg" cx="${center}" cy="${center}" r="${radius}"></circle>
+      <circle class="ring-fg" cx="${center}" cy="${center}" r="${radius}" stroke="${color}"
+        stroke-dasharray="${c}" stroke-dashoffset="${offset}"></circle>
+    </svg>`;
+  }
+
+  async function loadClients() {
+    const res = await fetch(API + '/api/clients');
+    const data = await res.json();
+    clients = data.clients || [];
+    renderStats();
+    renderList();
+    if (activeId && !clients.find(c => c.id === activeId)) activeId = null;
+    if (view === 'dashboard') renderDashboard();
+    else renderDossier();
+  }
+
+  function fmtDays(d) {
+    if (d === 0) return 'today';
+    if (d === 1) return '1 day ago';
+    return d + ' days ago';
+  }
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderStats() {
+    const cold = clients.filter(c => c.isCold).length;
+    document.getElementById('statLine').innerHTML =
+      `${clients.length} client${clients.length === 1 ? '' : 's'}` + (cold ? ` · <span class="cold-count">${cold} cooling</span>` : '');
+  }
+
+  function renderList() {
+    const list = document.getElementById('caseList');
+    if (!clients.length) { list.innerHTML = '<div class="empty-list">No clients yet — add your first one above.</div>'; return; }
+    list.innerHTML = '';
+    clients.forEach(c => {
+      const w = warmth(c.daysSinceContact);
+      const color = warmthColor(w);
+      const div = document.createElement('div');
+      div.className = 'case-item' + (view === 'client' && c.id === activeId ? ' active' : '');
+      div.innerHTML = `
+        <button class="case-delete" data-id="${c.id}" title="Remove client">✕</button>
+        <div class="avatar-ring">
+          ${ringSVG(16, w, color, 36)}
+          <div class="avatar-circle" style="background:${avatarColor(c.name)}">${initials(c.name)}</div>
+        </div>
+        <div class="case-name">${c.name}</div>
+        <div class="case-company">${c.company || '—'}</div>
+        <div class="case-meta${c.isCold ? ' cold-flag' : ''}">${c.isCold ? 'cooling · ' : 'contacted '}${fmtDays(c.daysSinceContact)}</div>
+      `;
+      div.onclick = (e) => {
+        if (e.target.classList.contains('case-delete')) return;
+        view = 'client'; activeId = c.id;
+        document.getElementById('tabDashboard').classList.remove('active');
+        document.getElementById('tabClients').classList.add('active');
+        renderList(); renderDossier();
+      };
+      div.querySelector('.case-delete').onclick = async (e) => {
+        e.stopPropagation();
+        if (!confirm(`Remove ${c.name} from your case list? Their memory stays in Hindsight, just hidden here.`)) return;
+        await fetch(API + '/api/clients/' + c.id, { method: 'DELETE' });
+        delete briefingCache[c.id];
+        if (activeId === c.id) { activeId = null; view = 'dashboard'; }
+        await loadClients();
+      };
+      list.appendChild(div);
+    });
+  }
+
+  async function renderDashboard() {
+    const el = document.getElementById('dossier');
+    el.innerHTML = `
+      <div class="dash-section">
+        <div class="dash-title">This week's watchlist</div>
+        <div class="dash-sub">Memory synthesized across your whole client base</div>
+        <div id="watchBox"><div class="dash-loading">Reviewing all client memory…</div></div>
+      </div>
+    `;
+    try {
+      const res = await fetch(API + '/api/dashboard');
+      const data = await res.json();
+      const box = document.getElementById('watchBox');
+      if (!box) return;
+      let html = '';
+      if (data.coldRelationships && data.coldRelationships.length) {
+        html += `<div class="watch-card"><div class="watch-card-title">GOING COLD</div>`;
+        data.coldRelationships.forEach(item => { html += `<div class="watch-item cold">${item}</div>`; });
+        html += `</div>`;
+      }
+      if (data.overduePromises && data.overduePromises.length) {
+        html += `<div class="watch-card"><div class="watch-card-title">OVERDUE / NEEDS FOLLOW-UP</div>`;
+        data.overduePromises.forEach(item => { html += `<div class="watch-item">${item}</div>`; });
+        html += `</div>`;
+      }
+      if (data.warmestClient) {
+        html += `<div class="watch-card"><div class="watch-card-title">STRONGEST RELATIONSHIP</div><div class="watch-item warm">${data.warmestClient}</div></div>`;
+      }
+      if (!html) html = '<div class="dash-loading">Add clients and notes to see your watchlist.</div>';
+      box.innerHTML = html;
+    } catch (e) {
+      const box = document.getElementById('watchBox');
+      if (box) box.innerHTML = '<div class="dash-loading">Could not load dashboard.</div>';
+    }
+  }
+
+  async function renderDossier() {
+    const c = clients.find(x => x.id === activeId);
+    const el = document.getElementById('dossier');
+    if (!c) { view = 'dashboard'; renderDashboard(); return; }
+
+    const w = warmth(c.daysSinceContact);
+    const color = warmthColor(w);
+    const cached = briefingCache[c.id];
+    const briefingHtml = cached
+      ? `<div class="briefing-label">BRIEFING · ${cached.count} memories recalled</div><div class="briefing-body" id="briefingBody">${cached.text}</div>`
+      : `<div class="briefing-label">BRIEFING</div><div class="briefing-body">Ask to be briefed and the full history — meetings, promises, concerns, pricing — comes back as one clear summary.</div>`;
+
+    el.innerHTML = `
+      <div class="dossier-head">
+        <div class="dossier-avatar-ring">
+          ${ringSVG(25, w, color, 56)}
+          <div class="dossier-avatar-circle" style="background:${avatarColor(c.name)}">${initials(c.name)}</div>
+        </div>
+        <div>
+          <h1>${c.name}</h1>
+          <div class="dossier-meta">
+            <span>${c.company || 'No company set'}</span>
+            <span class="${c.isCold ? 'flag' : ''}">${c.isCold ? '⚠ going cold — ' : 'last contact '}${fmtDays(c.daysSinceContact)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-label">Add to their record</div>
+      <textarea id="noteInput" placeholder="What happened? A meeting, a promise, a concern, a price they pushed back on..."></textarea>
+      <div class="hint">Ctrl / Cmd + Enter to save</div>
+      <div class="actions">
+        <button class="btn btn-primary" id="saveBtn">Save to memory</button>
+        <button class="btn btn-brief" id="briefBtn">Brief me</button>
+        <button class="btn btn-email" id="emailBtn">Draft follow-up email</button>
+        <span class="status-msg" id="statusMsg"></span>
+      </div>
+
+      <div class="briefing${cached ? ' reveal' : ' placeholder'}" id="briefingBox">${briefingHtml}</div>
+      <div class="email-panel" id="emailPanel"></div>
+
+      <div class="timeline">
+        <div class="timeline-label">RECORD · everything saved so far</div>
+        <div id="timelineList"><div class="timeline-empty">Loading…</div></div>
+      </div>
+    `;
+
+    const noteInput = document.getElementById('noteInput');
+    document.getElementById('saveBtn').onclick = () => saveNote(c);
+    document.getElementById('briefBtn').onclick = () => brief(c);
+    document.getElementById('emailBtn').onclick = () => draftEmail(c);
+    noteInput.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') saveNote(c); });
+
+    loadTimeline(c.id);
+
+    if (emailCache[c.id]) showEmail(emailCache[c.id]);
+  }
+
+  async function loadTimeline(clientId) {
+    const box = document.getElementById('timelineList');
+    if (!box) return;
+    try {
+      const res = await fetch(API + '/api/clients/' + clientId + '/notes');
+      const data = await res.json();
+      const notes = data.notes || [];
+      if (!notes.length) { box.innerHTML = '<div class="timeline-empty">Nothing saved yet — add the first note above.</div>'; return; }
+      box.innerHTML = notes.map(n => `
+        <div class="timeline-item">
+          <div class="timeline-date">${fmtDate(n.timestamp)}</div>
+          <div class="timeline-text">${n.text}</div>
+        </div>
+      `).join('');
+    } catch (e) {
+      box.innerHTML = '<div class="timeline-empty">Could not load record.</div>';
+    }
+  }
+
+  async function saveNote(c) {
+    const input = document.getElementById('noteInput');
+    const note = input.value.trim();
+    const status = document.getElementById('statusMsg');
+    const saveBtn = document.getElementById('saveBtn');
+    if (!note) return;
+    status.className = 'status-msg';
+    status.textContent = 'Saving…';
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    try {
+      const res = await fetch(API + '/api/save-note', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: c.id, note })
+      });
+      const data = await res.json();
+      if (data.success) {
+        status.textContent = 'Saved.';
+        input.value = '';
+        await loadClients();
+        loadTimeline(c.id);
+      } else {
+        status.className = 'status-msg err';
+        status.textContent = data.error || 'Could not save.';
+      }
+    } catch (e) {
+      status.className = 'status-msg err';
+      status.textContent = 'Could not reach server.';
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save to memory';
+    }
+  }
+
+  function startThinking(box) {
+    let step = 0;
+    box.className = 'briefing loading';
+    box.innerHTML = `<div class="briefing-label"><span class="think-dot"></span>BRIEFING</div><div class="briefing-body">${THINK_STEPS[0]}</div>`;
+    thinkInterval = setInterval(() => {
+      step = (step + 1) % THINK_STEPS.length;
+      const body = box.querySelector('.briefing-body');
+      if (body) body.textContent = THINK_STEPS[step];
+    }, 650);
+  }
+  function stopThinking() { if (thinkInterval) { clearInterval(thinkInterval); thinkInterval = null; } }
+  function typewrite(el, text, done) {
+    if (typeInterval) clearInterval(typeInterval);
+    let i = 0;
+    el.innerHTML = '<span class="cursor-blink"></span>';
+    const words = text.split(' ');
+    typeInterval = setInterval(() => {
+      i++;
+      const shown = words.slice(0, i).join(' ');
+      el.innerHTML = shown + '<span class="cursor-blink"></span>';
+      if (i >= words.length) { clearInterval(typeInterval); el.innerHTML = shown; if (done) done(); }
+    }, 28);
+  }
+
+  async function brief(c) {
+    const box = document.getElementById('briefingBox');
+    const briefBtn = document.getElementById('briefBtn');
+    briefBtn.disabled = true;
+    briefBtn.textContent = 'Briefing…';
+    startThinking(box);
+    try {
+      const res = await fetch(API + '/api/brief', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: c.id, clientName: c.name + (c.company ? ' (' + c.company + ')' : '') })
+      });
+      const data = await res.json();
+      const briefingText = data.briefing || data.error;
+      const count = data.rawMemoryCount || 0;
+      briefingCache[c.id] = { text: briefingText, count };
+      stopThinking();
+      box.className = 'briefing reveal';
+      box.innerHTML = `<div class="briefing-label">BRIEFING · ${count} memories recalled</div><div class="briefing-body" id="briefingBody"></div>`;
+      typewrite(document.getElementById('briefingBody'), briefingText);
+    } catch (e) {
+      stopThinking();
+      box.className = 'briefing reveal';
+      box.innerHTML = '<div class="briefing-label">BRIEFING</div><div class="briefing-body">Could not reach server.</div>';
+    } finally {
+      briefBtn.disabled = false;
+      briefBtn.textContent = 'Brief me';
+    }
+  }
+
+  function showEmail(data) {
+    const panel = document.getElementById('emailPanel');
+    if (!panel) return;
+    panel.className = 'email-panel show';
+    panel.innerHTML = `
+      <div class="email-subject">Subject: ${data.subject}</div>
+      <div class="email-body" id="emailBodyText">${data.body}</div>
+      <button class="email-copy" id="copyEmailBtn">Copy email</button>
+    `;
+    document.getElementById('copyEmailBtn').onclick = () => {
+      navigator.clipboard.writeText(`Subject: ${data.subject}\n\n${data.body}`);
+      const btn = document.getElementById('copyEmailBtn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy email'; }, 1500);
+    };
+  }
+
+  async function draftEmail(c) {
+    const emailBtn = document.getElementById('emailBtn');
+    const panel = document.getElementById('emailPanel');
+    emailBtn.disabled = true;
+    emailBtn.textContent = 'Drafting…';
+    panel.className = 'email-panel show';
+    panel.innerHTML = '<div class="dash-loading">Writing the follow-up using everything on record…</div>';
+    try {
+      const res = await fetch(API + '/api/draft-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: c.id, clientName: c.name + (c.company ? ' (' + c.company + ')' : '') })
+      });
+      const data = await res.json();
+      emailCache[c.id] = data;
+      showEmail(data);
+    } catch (e) {
+      panel.innerHTML = '<div class="dash-loading">Could not draft email.</div>';
+    } finally {
+      emailBtn.disabled = false;
+      emailBtn.textContent = 'Draft follow-up email';
+    }
+  }
+
+  document.getElementById('addToggle').onclick = () => document.getElementById('addForm').classList.add('open');
+  document.getElementById('addCancel').onclick = () => document.getElementById('addForm').classList.remove('open');
+  document.getElementById('addSubmit').onclick = submitNewClient;
+  document.getElementById('newCompany').addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNewClient(); });
+
+  document.getElementById('tabDashboard').onclick = () => {
+    view = 'dashboard'; activeId = null;
+    document.getElementById('tabDashboard').classList.add('active');
+    document.getElementById('tabClients').classList.remove('active');
+    renderList(); renderDashboard();
+  };
+  document.getElementById('tabClients').onclick = () => {
+    document.getElementById('tabClients').classList.add('active');
+    document.getElementById('tabDashboard').classList.remove('active');
+    if (clients.length) { view = 'client'; activeId = clients[0].id; renderList(); renderDossier(); }
+  };
+
+  async function submitNewClient() {
+    const name = document.getElementById('newName').value.trim();
+    const company = document.getElementById('newCompany').value.trim();
+    if (!name) return;
+    const res = await fetch(API + '/api/clients', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, company })
+    });
+    const data = await res.json();
+    document.getElementById('newName').value = '';
+    document.getElementById('newCompany').value = '';
+    document.getElementById('addForm').classList.remove('open');
+    if (data.client) { activeId = data.client.id; view = 'client'; }
+    await loadClients();
+  }
+
+  loadClients();
+</script>
+</body>
+</html>
