@@ -1,5 +1,7 @@
 # ClientMind — Relationship Intelligence, Powered by Memory
 
+🎬 **[▶️ Watch the ClientMind Demo on YouTube](https://youtube.com/shorts/0nTkz_KbaAc)**
+
 **ClientMind** is an AI agent that remembers everything about your business relationships — every meeting, every promise, every concern — so you never walk into a conversation with a client unprepared again.
 
 Built for **Hindsight**, a persistent memory system that lets AI agents recall and learn from past interactions instead of forgetting everything after each conversation.
